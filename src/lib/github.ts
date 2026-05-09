@@ -19,8 +19,17 @@ function friendlyGitHubError(status: number, path: string, body: string): string
   const repoMatch = path.match(/^\/repos\/([^/?]+)\/([^/?]+)/);
   const repoLabel = repoMatch ? `${repoMatch[1]}/${repoMatch[2]}` : "GitHub";
   const hasToken = !!process.env.GITHUB_TOKEN;
+  // Distinguish "repo doesn't exist" from "file doesn't exist within the repo".
+  // The /contents/<path> endpoint returns 404 for missing files too, so a
+  // generic "Repository not found" message would lie about what failed.
+  const isFileLookup = /\/contents\//.test(path) || /\/git\/trees\//.test(path);
 
   if (status === 404) {
+    if (isFileLookup) {
+      const fileMatch = path.match(/\/contents\/([^?]+)/);
+      const filePath = fileMatch ? decodeURI(fileMatch[1]) : "(unknown path)";
+      return `File not found in ${repoLabel}: "${filePath}". The path may be misspelled or moved — check the actual file location on github.com.`;
+    }
     return `Repository not found: ${repoLabel}. Double-check the URL — the repo may be misspelled, private, or moved. Try searching for it on github.com first.`;
   }
   if (status === 401) {
