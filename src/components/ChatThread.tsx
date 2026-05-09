@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { AuditResult, Citation } from "@/lib/types";
+import type { AuditResult, Citation, RepoRef } from "@/lib/types";
 import { AnswerCard } from "./AnswerCard";
 
 export type ToolEvent = {
@@ -24,11 +24,11 @@ export type UITurn =
     };
 
 type Props = {
-  sessionId: string;
+  repo: RepoRef | null;
   turns: UITurn[];
 };
 
-export function ChatThread({ sessionId, turns }: Props) {
+export function ChatThread({ repo, turns }: Props) {
   const endRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -46,7 +46,7 @@ export function ChatThread({ sessionId, turns }: Props) {
         ) : (
           <div key={`a-${t.index}`}>
             <AnswerCard
-              sessionId={sessionId}
+              repo={repo}
               content={t.content}
               citations={t.citations}
               audit={t.audit}

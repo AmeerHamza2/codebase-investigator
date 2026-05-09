@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { AuditResult, Citation } from "@/lib/types";
+import type { AuditResult, Citation, RepoRef } from "@/lib/types";
 import { AuditPanel } from "./AuditPanel";
 import { CitationPreview } from "./CitationPreview";
 
@@ -12,7 +12,7 @@ type ToolEvent = {
 };
 
 type Props = {
-  sessionId: string;
+  repo: RepoRef | null;
   content: string;
   citations: Citation[];
   audit?: AuditResult;
@@ -46,7 +46,7 @@ function renderContentWithCitationLinks(content: string): React.ReactNode[] {
 }
 
 export function AnswerCard({
-  sessionId,
+  repo,
   content,
   citations,
   audit,
@@ -100,7 +100,7 @@ export function AnswerCard({
           <div className="text-xs uppercase tracking-wide text-neutral-500">Citations</div>
           <div className="space-y-1">
             {dedupedCitations.map((c, i) => (
-              <CitationPreview key={i} sessionId={sessionId} citation={c} />
+              <CitationPreview key={i} repo={repo} citation={c} />
             ))}
           </div>
         </div>

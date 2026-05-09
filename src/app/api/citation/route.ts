@@ -1,20 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "@/lib/github";
-import { getSession } from "@/lib/memory";
+import type { RepoRef } from "@/lib/types";
 
 export const runtime = "nodejs";
 
+// Citation previews are stateless on purpose. Looking up the repo via session
+// breaks on Vercel because serverless invocations don't share the in-memory
+// Map — the request that creates the session may land on a different instance
+// than the request that fetches the citation. The client already knows the
+// repo, so it sends it directly.
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null) as
-    | { sessionId?: string; path?: string; startLine?: number; endLine?: number }
+    | {
+        repo?: RepoRef;
+        path?: string;
+        startLine?: number;
+        endLine?: number;
+      }
     | null;
 
-  if (!body?.sessionId || !body?.path) {
-    return NextResponse.json({ error: "sessionId and path required" }, { status: 400 });
+  if (!body?.repo?.owner || !body?.repo?.repo || !body?.repo?.ref) {
+    return NextResponse.json(
+      { error: "repo { owner, repo, ref } is required" },
+      { status: 400 },
+    );
   }
-  const session = getSession(body.sessionId);
-  if (!session) return NextResponse.json({ error: "Session not found (server may have restarted)" }, { status: 404 });
-  if (!session.repo) return NextResponse.json({ error: "Session has no repo" }, { status: 404 });
+  if (!body?.path) {
+    return NextResponse.json({ error: "path is required" }, { status: 400 });
+  }
 
   // Normalize: extracted citations occasionally have reversed ranges or
   // missing/non-numeric bounds. Coerce to a sane window before reading.
@@ -25,7 +38,7 @@ export async function POST(req: NextRequest) {
   const start = Math.max(1, lo - 2);
   const end = hi + 2;
   try {
-    const f = await readFile(session.repo, body.path, start, end);
+    const f = await readFile(body.repo, body.path, start, end);
     return NextResponse.json({ path: f.path, content: f.content, totalLines: f.totalLines });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

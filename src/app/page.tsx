@@ -202,7 +202,7 @@ export default function Page() {
             </ul>
           </div>
         ) : (
-          <ChatThread sessionId={sessionId ?? ""} turns={turns} />
+          <ChatThread repo={repo} turns={turns} />
         )}
       </div>
 

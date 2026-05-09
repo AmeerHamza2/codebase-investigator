@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type { Citation } from "@/lib/types";
+import type { Citation, RepoRef } from "@/lib/types";
 
 type Props = {
-  sessionId: string;
+  repo: RepoRef | null;
   citation: Citation;
 };
 
-export function CitationPreview({ sessionId, citation }: Props) {
+export function CitationPreview({ repo, citation }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState<string | null>(null);
@@ -25,6 +25,10 @@ export function CitationPreview({ sessionId, citation }: Props) {
     }
     setOpen(true);
     if (content || loading) return;
+    if (!repo) {
+      setError("Repo not connected — re-ask a question to attach this citation.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -32,7 +36,7 @@ export function CitationPreview({ sessionId, citation }: Props) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          sessionId,
+          repo,
           path: citation.path,
           startLine: citation.startLine,
           endLine: citation.endLine,
