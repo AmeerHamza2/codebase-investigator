@@ -6,7 +6,12 @@ import type { AuditResult, Citation, RepoRef, Session } from "./types";
 const AUDIT_MAX_TOKENS = 800;
 const AUDIT_CONTEXT_PADDING = 4; // extra lines before/after each cited range
 const MAX_EXCERPT_PER_CITATION = 80; // cap to keep auditor cheap and focused
-const AUDIT_TIMEOUT_MS = 45_000; // upper bound on the audit call so the UI can't hang
+const AUDIT_TIMEOUT_MS = 75_000; // bumped from 45s — long answers with 20+ citations need more headroom
+// Long answers (3000+ words on broad questions) push the audit prompt past
+// what Haiku can chew through in budget. The auditor's job is verifying
+// citations against fresh file excerpts — it doesn't need every paragraph
+// of prose to do that.
+const MAX_ANSWER_CHARS_FOR_AUDIT = 6000;
 
 function clampScore(n: unknown): 1 | 2 | 3 | 4 | 5 {
   const v = Math.round(Number(n));
@@ -136,6 +141,14 @@ export async function auditAnswer(
     Promise.resolve(summarizeHistoryForAudit(session, turnIndex)),
   ]);
 
+  // Truncate prose-heavy answers so the audit prompt doesn't outgrow Haiku's
+  // generation budget. Citations are the load-bearing signal; we keep all of
+  // them via fileExcerpts and just trim the surrounding narrative.
+  const answerForAudit = answer.length > MAX_ANSWER_CHARS_FOR_AUDIT
+    ? answer.slice(0, MAX_ANSWER_CHARS_FOR_AUDIT) +
+      `\n\n[…answer truncated at ${MAX_ANSWER_CHARS_FOR_AUDIT} chars for audit; ${answer.length - MAX_ANSWER_CHARS_FOR_AUDIT} chars omitted. All citations are still represented in the file excerpts below.]`
+    : answer;
+
   const client = getAnthropic();
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), AUDIT_TIMEOUT_MS);
@@ -145,7 +158,7 @@ export async function auditAnswer(
         model: MODEL,
         max_tokens: AUDIT_MAX_TOKENS,
         system: AUDIT_SYSTEM,
-        messages: [{ role: "user", content: buildAuditPrompt(answer, excerpts, history) }],
+        messages: [{ role: "user", content: buildAuditPrompt(answerForAudit, excerpts, history) }],
       },
       { signal: abort.signal },
     );

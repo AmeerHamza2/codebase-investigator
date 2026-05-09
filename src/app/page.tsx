@@ -157,7 +157,7 @@ export default function Page() {
   }, []);
 
   return (
-    <main className="max-w-3xl mx-auto p-6 min-h-screen flex flex-col">
+    <main className="max-w-3xl mx-auto p-6 h-screen flex flex-col">
       <header className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Codebase Investigator</h1>
         <p className="text-sm text-neutral-600 mt-1">
@@ -212,7 +212,7 @@ export default function Page() {
         </div>
       )}
 
-      <form onSubmit={submit} className="flex gap-2">
+      <form onSubmit={submit} className="flex gap-2 pt-3 border-t border-neutral-200">
         <input
           type="text"
           placeholder={status === "streaming" ? "Investigating…" : "Ask about this repo…"}
